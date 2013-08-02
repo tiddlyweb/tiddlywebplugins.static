@@ -7,9 +7,11 @@ if you make those sorts of changes.
 
 To use this set 'static_file_dir' in tiddlywebconfig.py to
 an absolute or relative (to the instance) path in
-which we can find the static files. If you do not set it
-a default of 'static' (relative to the current dir) will
-be used.
+which we can find the static files. Alternatively, to read
+static files from a package, provide a tuple of package name
+and path within the package. If you do not set this at all a
+default of 'static' (relative to the current dir) will be
+used.
 
 You also need to set 'static_url_dir' in tiddlywebconfig.py
 to a url path relative to the base or your tiddlyweb URL
@@ -31,13 +33,15 @@ Here is sample configuration to put in tiddlywebconfig.py
             'css_uri': '/stuff/html/tiddlyweb.css',
             'system_plugins': ['tiddlywebplugins.static'],
             'static_url_dir': 'stuff/html',
-            'static_file_dir': '/home/foobar/mystuff',
+            'static_file_dir': '/path/to/static', # or: ('my_package', 'assets')
             'log_level': 'DEBUG',
             }
 """
 
 import mimetypes
 import os
+
+from pkg_resources import resource_filename, resource_stream
 
 from httpexceptor import HTTP404
 
@@ -46,28 +50,31 @@ DEFAULT_MIME_TYPE = 'application/octet-stream'
 
 
 def static(environ, start_response):
-    pathname = environ['tiddlyweb.config'].get('static_file_dir', 'static')
     filename = environ['wsgiorg.routing_args'][1]['static_file']
 
     if '../' in filename:
         raise HTTP404('%s invalid' % filename)
 
-    full_path = os.path.join(pathname, filename)
-    if not os.path.exists(full_path):
+    dirpath = environ['tiddlyweb.config'].get('static_file_dir', 'static')
+    try:
+        if isinstance(dirpath, basestring): # regular directory
+            filepath = os.path.join(dirpath, filename)
+            fh = open(filepath)
+        else: # directory within package
+            package, dirpath = dirpath
+            filepath = os.path.join(dirpath, filename)
+            fh = resource_stream(package, filepath)
+            filepath = resource_filename(package, filepath)
+    except IOError:
         raise HTTP404('%s not found' % filename)
 
-    mime_type, encoding = mimetypes.guess_type(full_path)
+    mime_type, encoding = mimetypes.guess_type(filepath)
     if not mime_type:
         mime_type = DEFAULT_MIME_TYPE
 
-    try:
-        static_file = open(full_path)
-    except IOError, exc:
-        raise HTTP404('%s not found: %s' % (full_path, exc))
-
     start_response('200 OK', [('Content-Type', mime_type)])
 
-    return static_file
+    return fh
 
 
 def init(config):
