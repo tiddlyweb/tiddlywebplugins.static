@@ -57,14 +57,14 @@ def static(environ, start_response):
 
     dirpath = environ['tiddlyweb.config'].get('static_file_dir', 'static')
     try:
-        if isinstance(dirpath, basestring): # regular directory
-            filepath = os.path.join(dirpath, filename)
-            fh = open(filepath)
-        else: # directory within package
+        if isinstance(dirpath, tuple): # directory within package
             package, dirpath = dirpath
             filepath = os.path.join(dirpath, filename)
             fh = resource_stream(package, filepath)
             filepath = resource_filename(package, filepath)
+        else: # directory within package
+            filepath = os.path.join(dirpath, filename)
+            fh = open(filepath)
     except IOError:
         raise HTTP404('%s not found' % filename)
 
