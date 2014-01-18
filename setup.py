@@ -26,7 +26,7 @@ setup(
     url = 'http://pypi.python.org/pypi/tiddlywebplugins.static',
     packages = find_packages(exclude=['test']),
     author_email = 'cdent@peermore.com',
-    classifiers: CLASSIFIERS,
+    classifiers = CLASSIFIERS,
     platforms = 'Posix; MacOS X; Windows',
     install_requires = ['setuptools', 'httpexceptor', 'tiddlyweb>=1.3.0'],
     zip_safe = False,
